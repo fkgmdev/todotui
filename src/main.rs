@@ -12,17 +12,34 @@ enum State {
     Editing,
 }
 
+struct Task {
+    body: String,
+    completed: bool,
+}
+
+impl Task {
+    fn new(body: &str) -> Self {
+        Self {
+            body: body.to_string(),
+            completed: false,
+        }
+    }
+}
 struct AppState {
     list_state: ListState,
     state: State,
-    tasks: Vec<String>,
+    tasks: Vec<Task>,
 }
 
 fn main() -> io::Result<()> {
     let mut app = AppState {
         list_state: ListState::default().with_selected(Some(0)),
         state: State::Viewing,
-        tasks: vec!["Task 1".to_string(), "Task 2".to_string(), "Task 3".to_string()],
+        tasks: vec![
+            Task::new("Task 1"),
+            Task::new("Task 2"),
+            Task::new("Task 3")
+        ],
     };
     let terminal = ratatui::init();
     let result = run(terminal, &mut app);
@@ -31,9 +48,9 @@ fn main() -> io::Result<()> {
 }
 fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> {
     loop {
-        // ==============Update Variables===========
+        // * ==============Update Variables===========
         let selected = app.list_state.selected().unwrap_or(0);
-        // ==============Rendering===========
+        // * ==============Rendering===========
         terminal
             .draw(|f| {
                 let chunks = Layout::default()
@@ -45,18 +62,18 @@ fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> {
                     ])
                     .split(f.area());
 
-                // Title "TO-DO TUI"
+                // * Title "TO-DO TUI"
                 let title = Paragraph::new("TO-DO TUI")
                     .alignment(Alignment::Center)
                     .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded));
 
                 f.render_widget(title, chunks[0]);
 
-                // To-do list & ListItem conversion
+                // * To-do list & ListItem conversion
                 let items: Vec<ListItem> = app
                     .tasks
                     .iter()
-                    .map(|s| ListItem::new(s.as_str()))
+                    .map(|task| ListItem::new(task.body.as_str()))
                     .collect();
 
                 let list = List::new(items)
@@ -69,7 +86,7 @@ fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> {
 
                 f.render_stateful_widget(list, chunks[1], &mut app.list_state);
                 
-                // Exit clue
+                // * Exit clue
                 let footerprg = Paragraph::new("ESC to exit")
                     .alignment(Alignment::Center)
                     .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded));
@@ -78,23 +95,23 @@ fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> {
             })
             .unwrap();
 
-        // ================Key Checks=====================
+        // * ================Key Checks=====================
         if let Event::Key(key) = event::read()? {
             match key.code {
                 // Exit
                 event::KeyCode::Esc => {
                     break;
                 }
-                // Select Down
+                // * Select Down
                 event::KeyCode::Down => {
-                    if selected < (app.tasks.len() - 1) {
+                    if selected < app.tasks.len().saturating_sub(1) {
                         app.list_state.select(Some(selected + 1));
                     }
-                    else if selected == (app.tasks.len() - 1) {
+                    else if selected == app.tasks.len().saturating_sub(1) {
                         app.list_state.select(Some(0));
                     }
                 }
-                // Select Up
+                // * Select Up
                 event::KeyCode::Up => {
                     if selected > 0 && app.tasks.is_empty() == false {
                         app.list_state.select(Some(selected - 1));
@@ -103,6 +120,11 @@ fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> {
                         app.list_state.select(Some(app.tasks.len() - 1));
                     }
                 }
+                // * Delete task
+                event::KeyCode::Char('d') => 
+                    if app.tasks.is_empty() == false {
+                        app.tasks.remove(selected);
+                    }
                 _ => {}
             }
         }
