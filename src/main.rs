@@ -113,7 +113,7 @@ fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> {
                 }
                 
                 // * Exit clue
-                let footerprg = Paragraph::new("ESC to exit")
+                let footerprg = Paragraph::new("up/down to select, a to add, d to delete selected, esc to quit")
                     .alignment(Alignment::Center)
                     .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded));
                 let footerpos = chunks.len() - 1;
