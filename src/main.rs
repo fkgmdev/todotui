@@ -6,6 +6,7 @@ use ratatui::{
 };
 use ratatui_textarea::TextArea;
 use std::io;
+use textwrap::wrap;
 
 #[derive(PartialEq)]
 enum State {
@@ -52,6 +53,7 @@ fn main() -> io::Result<()> {
     ratatui::restore();
     result
 }
+
 fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> {
     loop {
         // * ==============Update Variables===========
@@ -87,17 +89,32 @@ fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> {
                 f.render_widget(title, chunks[0]);
 
                 // * To-do list & ListItem conversion
+                let list_block = Block::bordered().border_type(BorderType::Rounded).title("to-do");
+
+                let in_area = list_block.inner(chunks[1]);
+                let available_width = in_area.width.saturating_sub(4) as usize;
+
                 let items: Vec<ListItem> = app
                     .tasks
                     .iter()
-                    .map(|task| ListItem::new(task.body.as_str()))
+                    .map(|task| {
+                        let wrapped_lines = textwrap::wrap(task.body.as_str(), available_width);
+
+                        let wrapped_text = wrapped_lines
+                            .iter()
+                            .map(|cow| cow.to_string())
+                            .collect::<Vec<String>>()
+                            .join("\n");
+
+                        ListItem::new(wrapped_text)
+                    })
                     .collect();
 
                 let list = List::new(items)
-                        .block(Block::bordered().border_type(BorderType::Rounded).title("to-do"))
+                        .block(list_block)
                         .style(Style::new().white())
                         .highlight_style(Style::new().fg(Green))
-                        .highlight_symbol("=>")
+                        .highlight_symbol("=> ")
                         .repeat_highlight_symbol(true)
                         .direction(ratatui::widgets::ListDirection::TopToBottom);
 
