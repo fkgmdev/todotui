@@ -32,6 +32,7 @@ struct AppState {
     state: State,
     tasks: Vec<Task>,
     inputfield: TextArea<'static>,
+    input_title: String,
 }
 
 fn main() -> io::Result<()> {
@@ -44,6 +45,7 @@ fn main() -> io::Result<()> {
             Task::new("Task 3")
         ],
         inputfield: TextArea::default(),
+        input_title: String::new(),
     };
     let terminal = ratatui::init();
     let result = run(terminal, &mut app);
@@ -106,8 +108,8 @@ fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> {
                     let input_area = chunks[2];
                     let block = Block::bordered()
                         .border_type(BorderType::Rounded)
-                        .title("New Task");
-                    f.render_widget(block.clone(), chunks[2]);
+                        .title(app.input_title.clone());
+                    f.render_widget(&block, chunks[2]);
                     let inner_area = block.inner(chunks[2]);
                     f.render_widget(&app.inputfield, inner_area);
                 }
@@ -163,8 +165,18 @@ fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> {
                 // * Enter writing mode
                 event::KeyCode::Char('a') => {
                     if app.state == State::Viewing {
+                        app.input_title = String::from("New Task");
                         app.state = State::Writing;
                         app.inputfield.clear();
+                    }
+                }
+                // * Edit task
+                event::KeyCode::Char('e') => {
+                    if app.state == State::Viewing && app.tasks.is_empty() == false {
+                        app.input_title = String::from("Edit Task");
+                        app.inputfield.clear();
+                        app.inputfield.insert_str(app.tasks[app.list_state.selected().unwrap_or(0)].body.to_string());
+                        app.state = State::Editing;
                     }
                 }
                 // * Submit new task
@@ -177,6 +189,10 @@ fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> {
                         else {
                             app.tasks.insert(selected + 1, Task::new(&app.inputfield.lines().join("")));
                         }
+                        app.state = State::Viewing;
+                    }
+                    else if app.state == State::Editing && app.inputfield.lines().join("").is_empty() == false {
+                        app.tasks[app.list_state.selected().unwrap_or(0)].body = app.inputfield.lines().join("");
                         app.state = State::Viewing;
                     }
                 }
