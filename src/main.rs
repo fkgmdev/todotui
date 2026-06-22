@@ -1,8 +1,8 @@
 #![allow(clippy::all)]
 #![allow(unused)]
-use crossterm::event::{self, Event};
+use crossterm::{event::{self, Event}, style::Stylize};
 use ratatui::{
-    DefaultTerminal, layout::{Alignment, Constraint, Direction, Layout}, style::{Color::{Green, Yellow}, Style}, widgets::{Block, BorderType, Borders, List, ListItem, ListState, Paragraph, Widget}
+    DefaultTerminal, layout::{Alignment, Constraint, Direction, Layout}, style::{Color::{Blue, Green, Yellow}, Style}, text::{Line, Span}, widgets::{Block, BorderType, Borders, List, ListItem, ListState, Paragraph, Widget}
 };
 use ratatui_textarea::TextArea;
 use std::io;
@@ -66,7 +66,7 @@ fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> {
                     .constraints([
                         Constraint::Length(3),
                         Constraint::Min(1),
-                        Constraint::Length(3),
+                        // Constraint::Length(3),
                     ])
                     .split(f.area());
                 if app.state != State::Viewing {
@@ -76,7 +76,7 @@ fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> {
                         Constraint::Length(3),
                         Constraint::Min(1),
                         Constraint::Length(3),
-                        Constraint::Length(3),
+                        // Constraint::Length(3),
                     ])
                     .split(f.area());
                 }
@@ -89,7 +89,17 @@ fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> {
                 f.render_widget(title, chunks[0]);
 
                 // * To-do list & ListItem conversion
-                let list_block = Block::bordered().border_type(BorderType::Rounded).title("to-do");
+                let lower_title = Line::from(vec![
+                    Span::styled(" Navigate ", Style::default()),
+                    Span::styled("<Up/Down>", Style::default().fg(Blue).bold()),
+                    Span::styled(" New Task ", Style::default()),
+                    Span::styled("<A>", Style::default().fg(Blue).bold()),
+                    Span::styled(" Edit Task ", Style::default()),
+                    Span::styled("<E>", Style::default().fg(Blue).bold()),
+                    Span::styled(" Cancel/Exit ", Style::default()),
+                    Span::styled("<ESC> ", Style::default().fg(Blue).bold()),
+                ]);
+                let list_block = Block::bordered().border_type(BorderType::Rounded).title("to-do").title_bottom(lower_title);
 
                 let in_area = list_block.inner(chunks[1]);
                 let available_width = in_area.width.saturating_sub(4) as usize;
@@ -132,11 +142,11 @@ fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> {
                 }
                 
                 // * Exit clue
-                let footerprg = Paragraph::new("up/down to select, a to add, d to delete selected, esc to quit")
-                    .alignment(Alignment::Center)
-                    .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded));
-                let footerpos = chunks.len() - 1;
-                f.render_widget(footerprg, chunks[footerpos]);
+                // let footerprg = Paragraph::new("up/down to select, a to add, d to delete selected, esc to quit")
+                //     .alignment(Alignment::Center)
+                //     .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded));
+                // let footerpos = chunks.len() - 1;
+                // f.render_widget(footerprg, chunks[footerpos]);
             })
             .unwrap();
 
@@ -166,16 +176,16 @@ fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> {
                 }
                 // * Select Up
                 event::KeyCode::Up => {
-                    if selected > 0 && app.tasks.is_empty() == false {
+                    if selected > 0 && !app.tasks.is_empty() {
                         app.list_state.select(Some(selected - 1));
                     }
-                    else if selected == 0 && app.tasks.is_empty() == false {
+                    else if selected == 0 && !app.tasks.is_empty() {
                         app.list_state.select(Some(app.tasks.len() - 1));
                     }
                 }
                 // * Delete task
                 event::KeyCode::Char('d') => {
-                    if app.tasks.is_empty() == false && app.state == State::Viewing {
+                    if !app.tasks.is_empty() && app.state == State::Viewing {
                         app.tasks.remove(app.list_state.selected().unwrap_or(0));
                     }
                 }
@@ -189,7 +199,7 @@ fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> {
                 }
                 // * Edit task
                 event::KeyCode::Char('e') => {
-                    if app.state == State::Viewing && app.tasks.is_empty() == false {
+                    if app.state == State::Viewing && !app.tasks.is_empty() {
                         app.input_title = String::from("Edit Task");
                         app.inputfield.clear();
                         app.inputfield.insert_str(app.tasks[app.list_state.selected().unwrap_or(0)].body.to_string());
@@ -198,7 +208,7 @@ fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> {
                 }
                 // * Submit new task
                 event::KeyCode::Enter => {
-                    if app.state == State::Writing && app.inputfield.lines().join("").is_empty() == false {
+                    if app.state == State::Writing && !app.inputfield.lines().join("").is_empty() {
                         selected = app.list_state.selected().unwrap_or(0);
                         if app.tasks.is_empty() {
                             app.tasks.insert(0, Task::new(&app.inputfield.lines().join("")));
@@ -208,7 +218,7 @@ fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> {
                         }
                         app.state = State::Viewing;
                     }
-                    else if app.state == State::Editing && app.inputfield.lines().join("").is_empty() == false {
+                    else if app.state == State::Editing && !app.inputfield.lines().join("").is_empty() {
                         app.tasks[app.list_state.selected().unwrap_or(0)].body = app.inputfield.lines().join("");
                         app.state = State::Viewing;
                     }
