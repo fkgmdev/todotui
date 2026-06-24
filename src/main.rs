@@ -5,7 +5,7 @@ use ratatui::{
     DefaultTerminal, layout::{Alignment, Constraint, Direction, Layout}, style::{Color::{Blue, Green, Yellow}, Style}, text::{Line, Span}, widgets::{Block, BorderType, Borders, List, ListItem, ListState, Paragraph, Widget}
 };
 use ratatui_textarea::TextArea;
-use std::io;
+use std::{fmt::format, io};
 use textwrap::wrap;
 
 #[derive(PartialEq)]
@@ -36,6 +36,12 @@ struct AppState {
     input_title: String,
 }
 
+impl AppState {
+    fn selected(&self) -> usize {
+        self.list_state.selected().unwrap_or(0)
+    }
+}
+
 fn main() -> io::Result<()> {
     let mut app = AppState {
         list_state: ListState::default().with_selected(Some(0)),
@@ -57,7 +63,7 @@ fn main() -> io::Result<()> {
 fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> {
     loop {
         // * ==============Update Variables===========
-        let mut selected = app.list_state.selected().unwrap_or(0);
+        // let mut selected = app.list_state.selected().unwrap_or(0);
         // * ==============Rendering===========
         terminal
             .draw(|f| {
@@ -102,20 +108,32 @@ fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> {
                 let list_block = Block::bordered().border_type(BorderType::Rounded).title("to-do").title_bottom(lower_title);
 
                 let in_area = list_block.inner(chunks[1]);
-                let available_width = in_area.width.saturating_sub(4) as usize;
+                let available_width = in_area.width.saturating_sub(6) as usize;
 
                 let items: Vec<ListItem> = app
                     .tasks
                     .iter()
                     .map(|task| {
-                        let wrapped_lines = textwrap::wrap(task.body.as_str(), available_width);
+                        let mut completion_lines = String::new();
+                        if task.completed {
+                            completion_lines = format!("C: {}", task.body.as_str());
+                        }
+                        else {
+                            completion_lines = format!("I: {}", task.body.as_str());
+                        }
+                        let wrapped_lines = textwrap::wrap(&completion_lines, available_width);
 
                         let wrapped_text = wrapped_lines
                             .iter()
                             .map(|cow| cow.to_string())
                             .collect::<Vec<String>>()
                             .join("\n");
-
+                        // if task.completed {
+                        //     return ListItem::new(format!("I: {}", wrapped_text))
+                        // }
+                        // else {
+                        //     return ListItem::new(format!("C: {}", wrapped_text))
+                        // }
                         ListItem::new(wrapped_text)
                     })
                     .collect();
@@ -167,19 +185,19 @@ fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> {
                 }
                 // * Select Down
                 event::KeyCode::Down => {
-                    if selected < app.tasks.len().saturating_sub(1) {
-                        app.list_state.select(Some(selected + 1));
+                    if app.selected() < app.tasks.len().saturating_sub(1) {
+                        app.list_state.select(Some(app.selected() + 1));
                     }
-                    else if selected == app.tasks.len().saturating_sub(1) {
+                    else if app.selected() == app.tasks.len().saturating_sub(1) {
                         app.list_state.select(Some(0));
                     }
                 }
                 // * Select Up
                 event::KeyCode::Up => {
-                    if selected > 0 && !app.tasks.is_empty() {
-                        app.list_state.select(Some(selected - 1));
+                    if app.selected() > 0 && !app.tasks.is_empty() {
+                        app.list_state.select(Some(app.selected() - 1));
                     }
-                    else if selected == 0 && !app.tasks.is_empty() {
+                    else if app.selected() == 0 && !app.tasks.is_empty() {
                         app.list_state.select(Some(app.tasks.len() - 1));
                     }
                 }
@@ -206,10 +224,16 @@ fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> {
                         app.state = State::Editing;
                     }
                 }
+                // * Complete/Decomplete task
+                event::KeyCode::Char(' ') => {
+                    if !app.tasks.is_empty() {
+                        app.tasks[app.list_state.selected().unwrap_or(0)].completed = !app.tasks[app.list_state.selected().unwrap_or(0)].completed;
+                    }
+                }
                 // * Submit new task
                 event::KeyCode::Enter => {
+                    let selected = app.selected();
                     if app.state == State::Writing && !app.inputfield.lines().join("").is_empty() {
-                        selected = app.list_state.selected().unwrap_or(0);
                         if app.tasks.is_empty() {
                             app.tasks.insert(0, Task::new(&app.inputfield.lines().join("")));
                         }
@@ -219,7 +243,7 @@ fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> {
                         app.state = State::Viewing;
                     }
                     else if app.state == State::Editing && !app.inputfield.lines().join("").is_empty() {
-                        app.tasks[app.list_state.selected().unwrap_or(0)].body = app.inputfield.lines().join("");
+                        app.tasks[selected].body = app.inputfield.lines().join("");
                         app.state = State::Viewing;
                     }
                 }
