@@ -4,7 +4,7 @@ use ratatui::{
 };
 use ratatui_textarea::TextArea;
 use std::{fmt::format, io};
-use textwrap::wrap;
+// use textwrap::wrap;
 
 #[derive(PartialEq)]
 pub enum State {
