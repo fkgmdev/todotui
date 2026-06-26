@@ -15,6 +15,7 @@ pub enum State {
 pub struct Task {
     body: String,
     completed: bool,
+    priority: i32,
 }
 
 impl Task {
@@ -22,6 +23,7 @@ impl Task {
         Self {
             body: body.to_string(),
             completed: false,
+            priority: 0,
         }
     }
 }
@@ -100,6 +102,18 @@ pub fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> 
                         }
                         else {
                             completion_lines = format!("I: {}", task.body.as_str());
+                        }
+                        match task.priority {
+                            0 => {
+                                completion_lines = format!("! {}", completion_lines);
+                            }
+                            1 => {
+                                completion_lines = format!("!! {}", completion_lines);
+                            }
+                            2 => {
+                                completion_lines = format!("!!! {}", completion_lines);
+                            }
+                            _ => {}
                         }
                         let wrapped_lines = textwrap::wrap(&completion_lines, available_width);
 
@@ -212,6 +226,16 @@ fn handle_key(app: &mut AppState, key: KeyEvent) -> bool {
                 app.inputfield.clear();
                 app.inputfield.insert_str(app.tasks[app.selected()].body.to_string());
                 app.state = State::Editing;
+            }
+        }
+        // * Cycle priority
+        event::KeyCode::Char('r') => {
+            if !app.tasks.is_empty() {
+                let list_selected = app.selected();
+                let mut priority = app.tasks[list_selected].priority;
+                priority += 1;
+                priority %= 3;
+                app.tasks[list_selected].priority = priority;
             }
         }
         // * Complete/Decomplete task
