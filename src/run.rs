@@ -1,10 +1,9 @@
-use crossterm::{event::{self, Event}, style::Stylize};
+use crossterm::{event::{self, Event, KeyEvent}, style::Stylize};
 use ratatui::{
     DefaultTerminal, layout::{Alignment, Constraint, Direction, Layout}, style::{Color::{Blue, Green, Yellow}, Style}, text::{Line, Span}, widgets::{Block, BorderType, Borders, List, ListItem, ListState, Paragraph, Widget}
 };
 use ratatui_textarea::TextArea;
 use std::{fmt::format, io};
-// use textwrap::wrap;
 
 #[derive(PartialEq)]
 pub enum State {
@@ -151,86 +150,94 @@ pub fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> 
 
         // * ================Key Checks=====================
         if let Event::Key(key) = event::read()? {
-            if app.state != State::Viewing {
-                app.inputfield.input(key);
-            }
-            match key.code {
-                // * Exit
-                event::KeyCode::Esc => {
-                    if app.state == State::Viewing {
-                        break;
-                    }
-                    else {
-                        app.state = State::Viewing;
-                    }
-                }
-                // * Select Down
-                event::KeyCode::Down => {
-                    if app.selected() < app.tasks.len().saturating_sub(1) {
-                        app.list_state.select(Some(app.selected() + 1));
-                    }
-                    else if app.selected() == app.tasks.len().saturating_sub(1) {
-                        app.list_state.select(Some(0));
-                    }
-                }
-                // * Select Up
-                event::KeyCode::Up => {
-                    if app.selected() > 0 && !app.tasks.is_empty() {
-                        app.list_state.select(Some(app.selected() - 1));
-                    }
-                    else if app.selected() == 0 && !app.tasks.is_empty() {
-                        app.list_state.select(Some(app.tasks.len() - 1));
-                    }
-                }
-                // * Delete task
-                event::KeyCode::Char('d') => {
-                    if !app.tasks.is_empty() && app.state == State::Viewing {
-                        app.tasks.remove(app.list_state.selected().unwrap_or(0));
-                    }
-                }
-                // * Enter writing mode
-                event::KeyCode::Char('a') => {
-                    if app.state == State::Viewing {
-                        app.input_title = String::from("New Task");
-                        app.state = State::Writing;
-                        app.inputfield.clear();
-                    }
-                }
-                // * Edit task
-                event::KeyCode::Char('e') => {
-                    if app.state == State::Viewing && !app.tasks.is_empty() {
-                        app.input_title = String::from("Edit Task");
-                        app.inputfield.clear();
-                        app.inputfield.insert_str(app.tasks[app.list_state.selected().unwrap_or(0)].body.to_string());
-                        app.state = State::Editing;
-                    }
-                }
-                // * Complete/Decomplete task
-                event::KeyCode::Char(' ') => {
-                    if !app.tasks.is_empty() {
-                        app.tasks[app.list_state.selected().unwrap_or(0)].completed = !app.tasks[app.list_state.selected().unwrap_or(0)].completed;
-                    }
-                }
-                // * Submit new task
-                event::KeyCode::Enter => {
-                    let selected = app.selected();
-                    if app.state == State::Writing && !app.inputfield.lines().join("").is_empty() {
-                        if app.tasks.is_empty() {
-                            app.tasks.insert(0, Task::new(&app.inputfield.lines().join("")));
-                        }
-                        else {
-                            app.tasks.insert(selected + 1, Task::new(&app.inputfield.lines().join("")));
-                        }
-                        app.state = State::Viewing;
-                    }
-                    else if app.state == State::Editing && !app.inputfield.lines().join("").is_empty() {
-                        app.tasks[selected].body = app.inputfield.lines().join("");
-                        app.state = State::Viewing;
-                    }
-                }
-                _ => {}
+            let exit = handle_key(app, key);
+            if exit {
+                break;
             }
         }
     }
     Ok(())
+}
+
+fn handle_key(app: &mut AppState, key: KeyEvent) -> bool {
+    if app.state != State::Viewing {
+        app.inputfield.input(key);
+    }
+    match key.code {
+        // * Exit
+        event::KeyCode::Esc => {
+            if app.state == State::Viewing {
+                return true
+            }
+            else {
+                app.state = State::Viewing;
+            }
+        }
+        // * Select Down
+        event::KeyCode::Down => {
+            if app.selected() < app.tasks.len().saturating_sub(1) {
+                app.list_state.select(Some(app.selected() + 1));
+            }
+            else if app.selected() == app.tasks.len().saturating_sub(1) {
+                app.list_state.select(Some(0));
+            }
+        }
+        // * Select Up
+        event::KeyCode::Up => {
+            if app.selected() > 0 && !app.tasks.is_empty() {
+                app.list_state.select(Some(app.selected() - 1));
+            }
+            else if app.selected() == 0 && !app.tasks.is_empty() {
+                app.list_state.select(Some(app.tasks.len() - 1));
+            }
+        }
+        // * Delete task
+        event::KeyCode::Char('d') => {
+            if !app.tasks.is_empty() && app.state == State::Viewing {
+                app.tasks.remove(app.selected());
+            }
+        }
+        // * Enter writing mode
+        event::KeyCode::Char('a') => {
+            if app.state == State::Viewing {
+                app.input_title = String::from("New Task");
+                app.state = State::Writing;
+                app.inputfield.clear();
+            }
+        }
+        // * Edit task
+        event::KeyCode::Char('e') => {
+            if app.state == State::Viewing && !app.tasks.is_empty() {
+                app.input_title = String::from("Edit Task");
+                app.inputfield.clear();
+                app.inputfield.insert_str(app.tasks[app.selected()].body.to_string());
+                app.state = State::Editing;
+            }
+        }
+        // * Complete/Decomplete task
+        event::KeyCode::Char(' ') => {
+            if !app.tasks.is_empty() {
+                app.tasks[app.list_state.selected().unwrap_or(0)].completed = !app.tasks[app.selected()].completed;
+            }
+        }
+        // * Submit new task
+        event::KeyCode::Enter => {
+            let selected = app.selected();
+            if app.state == State::Writing && !app.inputfield.lines().join("").is_empty() {
+                if app.tasks.is_empty() {
+                    app.tasks.insert(0, Task::new(&app.inputfield.lines().join("")));
+                }
+                else {
+                    app.tasks.insert(selected + 1, Task::new(&app.inputfield.lines().join("")));
+                }
+                app.state = State::Viewing;
+            }
+            else if app.state == State::Editing && !app.inputfield.lines().join("").is_empty() {
+                app.tasks[selected].body = app.inputfield.lines().join("");
+                app.state = State::Viewing;
+            }
+        }
+        _ => {}
+    }
+    return false
 }
