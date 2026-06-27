@@ -13,7 +13,9 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, List, ListItem, ListState, Paragraph, Widget},
 };
 use ratatui_textarea::TextArea;
-use std::{fmt::format, io};
+use std::{fmt::format, fs::read_to_string, io};
+use std::fs;
+use serde::{Deserialize, Serialize};
 
 #[derive(PartialEq)]
 pub enum State {
@@ -38,6 +40,13 @@ impl Task {
     }
 }
 
+#[derive(Serialize, Deserialize)]
+struct StoredTask {
+    body: String,
+    completed: bool,
+    priority: i32,
+}
+
 pub struct AppState {
     pub list_state: ListState,
     pub state: State,
@@ -50,6 +59,35 @@ impl AppState {
     fn selected(&self) -> usize {
         self.list_state.selected().unwrap_or(0)
     }
+}
+
+fn save_list(tasks: &[Task]) -> io::Result<()> {
+    let data: Vec<StoredTask> = tasks
+        .iter()
+        .map(|t| StoredTask {
+            body: t.body.clone(),
+            completed: t.completed,
+            priority: t.priority,
+        })
+        .collect();
+
+    let json = serde_json::to_string_pretty(&data)?;
+    let path = String::from("tasks.json");
+    fs::write(path, json)?;
+    Ok(())
+}
+
+pub fn load_list() -> io::Result<Vec<Task>> {
+    let json = read_to_string("tasks.json")?;
+    let data: Vec<StoredTask> = serde_json::from_str(&json)?;
+    Ok(data
+        .into_iter()
+        .map(|s| Task {
+            body: s.body,
+            completed: s.completed,
+            priority: s.priority,
+        })
+        .collect::<Vec<Task>>())
 }
 
 pub fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> {
@@ -172,6 +210,7 @@ pub fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> 
         if let Event::Key(key) = event::read()? {
             let exit = handle_key(app, key);
             if exit {
+                save_list(&app.tasks);
                 break;
             }
         }
