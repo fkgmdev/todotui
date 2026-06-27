@@ -55,7 +55,6 @@ impl AppState {
 pub fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> {
     loop {
         // * ==============Update Variables===========
-        // let mut selected = app.list_state.selected().unwrap_or(0);
         // * ==============Rendering===========
         terminal
             .draw(|f| {
@@ -64,7 +63,6 @@ pub fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> 
                     .constraints([
                         Constraint::Length(3),
                         Constraint::Min(1),
-                        // Constraint::Length(3),
                     ])
                     .split(f.area());
                 if app.state != State::Viewing {
@@ -74,7 +72,6 @@ pub fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> 
                             Constraint::Length(3),
                             Constraint::Min(1),
                             Constraint::Length(3),
-                            // Constraint::Length(3),
                         ])
                         .split(f.area());
                 }
@@ -142,12 +139,6 @@ pub fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> 
                             .map(|cow| cow.to_string())
                             .collect::<Vec<String>>()
                             .join("\n");
-                        // if task.completed {
-                        //     return ListItem::new(format!("I: {}", wrapped_text))
-                        // }
-                        // else {
-                        //     return ListItem::new(format!("C: {}", wrapped_text))
-                        // }
                         ListItem::new(wrapped_text)
                     })
                     .collect();
@@ -174,11 +165,6 @@ pub fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> 
                 }
 
                 // * Exit clue
-                // let footerprg = Paragraph::new("up/down to select, a to add, d to delete selected, esc to quit")
-                //     .alignment(Alignment::Center)
-                //     .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded));
-                // let footerpos = chunks.len() - 1;
-                // f.render_widget(footerprg, chunks[footerpos]);
             })
             .unwrap();
 
