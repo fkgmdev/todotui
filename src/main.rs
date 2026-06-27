@@ -1,11 +1,8 @@
 #![allow(clippy::all)]
 #![allow(unused)]
-use crossterm::{event::{self, Event}, style::Stylize};
-use ratatui::{
-    DefaultTerminal, layout::{Alignment, Constraint, Direction, Layout}, style::{Color::{Blue, Green, Yellow}, Style}, text::{Line, Span}, widgets::{Block, BorderType, Borders, List, ListItem, ListState, Paragraph, Widget}
-};
+use ratatui::widgets::ListState;
 use ratatui_textarea::TextArea;
-use std::{fmt::format, io};
+use std::io;
 mod run;
 
 fn main() -> io::Result<()> {
