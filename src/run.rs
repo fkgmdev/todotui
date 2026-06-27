@@ -1,6 +1,16 @@
-use crossterm::{event::{self, Event, KeyEvent}, style::Stylize};
+use crossterm::{
+    event::{self, Event, KeyEvent},
+    style::Stylize,
+};
 use ratatui::{
-    DefaultTerminal, layout::{Alignment, Constraint, Direction, Layout}, style::{Color::{Blue, Green, Yellow}, Style}, text::{Line, Span}, widgets::{Block, BorderType, Borders, List, ListItem, ListState, Paragraph, Widget}
+    DefaultTerminal,
+    layout::{Alignment, Constraint, Direction, Layout},
+    style::{
+        Color::{Blue, Green, Yellow},
+        Style,
+    },
+    text::{Line, Span},
+    widgets::{Block, BorderType, Borders, List, ListItem, ListState, Paragraph, Widget},
 };
 use ratatui_textarea::TextArea;
 use std::{fmt::format, io};
@@ -59,20 +69,24 @@ pub fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> 
                     .split(f.area());
                 if app.state != State::Viewing {
                     chunks = Layout::default()
-                    .direction(Direction::Vertical)
-                    .constraints([
-                        Constraint::Length(3),
-                        Constraint::Min(1),
-                        Constraint::Length(3),
-                        // Constraint::Length(3),
-                    ])
-                    .split(f.area());
+                        .direction(Direction::Vertical)
+                        .constraints([
+                            Constraint::Length(3),
+                            Constraint::Min(1),
+                            Constraint::Length(3),
+                            // Constraint::Length(3),
+                        ])
+                        .split(f.area());
                 }
 
                 // * Title "TO-DO TUI"
                 let title = Paragraph::new("TO-DO TUI")
                     .alignment(Alignment::Center)
-                    .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded));
+                    .block(
+                        Block::default()
+                            .borders(Borders::ALL)
+                            .border_type(BorderType::Rounded),
+                    );
 
                 f.render_widget(title, chunks[0]);
 
@@ -84,10 +98,17 @@ pub fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> 
                     Span::styled("<A>", Style::default().fg(Blue).bold()),
                     Span::styled(" Edit Task ", Style::default()),
                     Span::styled("<E>", Style::default().fg(Blue).bold()),
+                    Span::styled(" Cycle Priority ", Style::default()),
+                    Span::styled("<R>", Style::default().fg(Blue).bold()),
+                    Span::styled(" Mark Task ", Style::default()),
+                    Span::styled("<Space>", Style::default().fg(Blue).bold()),
                     Span::styled(" Cancel/Exit ", Style::default()),
                     Span::styled("<ESC> ", Style::default().fg(Blue).bold()),
                 ]);
-                let list_block = Block::bordered().border_type(BorderType::Rounded).title("to-do").title_bottom(lower_title);
+                let list_block = Block::bordered()
+                    .border_type(BorderType::Rounded)
+                    .title("to-do")
+                    .title_bottom(lower_title);
 
                 let in_area = list_block.inner(chunks[1]);
                 let available_width = in_area.width.saturating_sub(6) as usize;
@@ -99,8 +120,7 @@ pub fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> 
                         let mut completion_lines = String::new();
                         if task.completed {
                             completion_lines = format!("C: {}", task.body.as_str());
-                        }
-                        else {
+                        } else {
                             completion_lines = format!("I: {}", task.body.as_str());
                         }
                         match task.priority {
@@ -133,12 +153,12 @@ pub fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> 
                     .collect();
 
                 let list = List::new(items)
-                        .block(list_block)
-                        .style(Style::new().white())
-                        .highlight_style(Style::new().fg(Green))
-                        .highlight_symbol("=> ")
-                        .repeat_highlight_symbol(true)
-                        .direction(ratatui::widgets::ListDirection::TopToBottom);
+                    .block(list_block)
+                    .style(Style::new().white())
+                    .highlight_style(Style::new().fg(Green))
+                    .highlight_symbol("=> ")
+                    .repeat_highlight_symbol(true)
+                    .direction(ratatui::widgets::ListDirection::TopToBottom);
 
                 f.render_stateful_widget(list, chunks[1], &mut app.list_state);
 
@@ -152,7 +172,7 @@ pub fn run(mut terminal: DefaultTerminal, app: &mut AppState) -> io::Result<()> 
                     let inner_area = block.inner(chunks[2]);
                     f.render_widget(&app.inputfield, inner_area);
                 }
-                
+
                 // * Exit clue
                 // let footerprg = Paragraph::new("up/down to select, a to add, d to delete selected, esc to quit")
                 //     .alignment(Alignment::Center)
@@ -181,9 +201,8 @@ fn handle_key(app: &mut AppState, key: KeyEvent) -> bool {
         // * Exit
         event::KeyCode::Esc => {
             if app.state == State::Viewing {
-                return true
-            }
-            else {
+                return true;
+            } else {
                 app.state = State::Viewing;
             }
         }
@@ -191,8 +210,7 @@ fn handle_key(app: &mut AppState, key: KeyEvent) -> bool {
         event::KeyCode::Down => {
             if app.selected() < app.tasks.len().saturating_sub(1) {
                 app.list_state.select(Some(app.selected() + 1));
-            }
-            else if app.selected() == app.tasks.len().saturating_sub(1) {
+            } else if app.selected() == app.tasks.len().saturating_sub(1) {
                 app.list_state.select(Some(0));
             }
         }
@@ -200,8 +218,7 @@ fn handle_key(app: &mut AppState, key: KeyEvent) -> bool {
         event::KeyCode::Up => {
             if app.selected() > 0 && !app.tasks.is_empty() {
                 app.list_state.select(Some(app.selected() - 1));
-            }
-            else if app.selected() == 0 && !app.tasks.is_empty() {
+            } else if app.selected() == 0 && !app.tasks.is_empty() {
                 app.list_state.select(Some(app.tasks.len() - 1));
             }
         }
@@ -224,7 +241,8 @@ fn handle_key(app: &mut AppState, key: KeyEvent) -> bool {
             if app.state == State::Viewing && !app.tasks.is_empty() {
                 app.input_title = String::from("Edit Task");
                 app.inputfield.clear();
-                app.inputfield.insert_str(app.tasks[app.selected()].body.to_string());
+                app.inputfield
+                    .insert_str(app.tasks[app.selected()].body.to_string());
                 app.state = State::Editing;
             }
         }
@@ -241,7 +259,8 @@ fn handle_key(app: &mut AppState, key: KeyEvent) -> bool {
         // * Complete/Decomplete task
         event::KeyCode::Char(' ') => {
             if !app.tasks.is_empty() {
-                app.tasks[app.list_state.selected().unwrap_or(0)].completed = !app.tasks[app.selected()].completed;
+                app.tasks[app.list_state.selected().unwrap_or(0)].completed =
+                    !app.tasks[app.selected()].completed;
             }
         }
         // * Submit new task
@@ -249,19 +268,20 @@ fn handle_key(app: &mut AppState, key: KeyEvent) -> bool {
             let selected = app.selected();
             if app.state == State::Writing && !app.inputfield.lines().join("").is_empty() {
                 if app.tasks.is_empty() {
-                    app.tasks.insert(0, Task::new(&app.inputfield.lines().join("")));
-                }
-                else {
-                    app.tasks.insert(selected + 1, Task::new(&app.inputfield.lines().join("")));
+                    app.tasks
+                        .insert(0, Task::new(&app.inputfield.lines().join("")));
+                } else {
+                    app.tasks
+                        .insert(selected + 1, Task::new(&app.inputfield.lines().join("")));
                 }
                 app.state = State::Viewing;
-            }
-            else if app.state == State::Editing && !app.inputfield.lines().join("").is_empty() {
+            } else if app.state == State::Editing && !app.inputfield.lines().join("").is_empty() {
                 app.tasks[selected].body = app.inputfield.lines().join("");
                 app.state = State::Viewing;
             }
         }
         _ => {}
     }
-    return false
+    return false;
 }
+
